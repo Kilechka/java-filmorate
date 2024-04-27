@@ -16,7 +16,7 @@ import java.util.Map;
 @Slf4j
 public class FilmController {
 
-    private final LocalDate MIN_RELEASE_DATE = LocalDate.of(1895, 12, 28);
+    private final LocalDate minReleaseDate = LocalDate.of(1895, 12, 28);
     private Map<Long, Film> films = new HashMap<>();
     private Long idForFilm = 0L;
 
@@ -31,7 +31,7 @@ public class FilmController {
             log.warn("Максимальная длина описания — 200 символов");
             throw new ValidationException("Максимальная длина описания — 200 символов");
         }
-        if (film.getReleaseDate().isBefore(MIN_RELEASE_DATE)) {
+        if (film.getReleaseDate().isBefore(minReleaseDate)) {
             log.warn("Дата релиза должна быть не раньше 28 декабря 1895 года");
             throw new ValidationException("Дата релиза должна быть не раньше 28 декабря 1895 года");
         }
@@ -60,7 +60,7 @@ public class FilmController {
             log.warn("Максимальная длина описания — 200 символов");
             throw new ValidationException("Максимальная длина описания — 200 символов");
         }
-        if (newFilm.getReleaseDate().isBefore(MIN_RELEASE_DATE)) {
+        if (newFilm.getReleaseDate().isBefore(minReleaseDate)) {
             log.warn("Дата релиза должна быть не раньше 28 декабря 1895 года");
             throw new ValidationException("Дата релиза должна быть не раньше 28 декабря 1895 года");
         }
