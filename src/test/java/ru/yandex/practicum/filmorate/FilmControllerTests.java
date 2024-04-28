@@ -131,4 +131,24 @@ public class FilmControllerTests {
 
         assertThrows(NotFoundException.class, () -> filmController.updateFilm(newFilm));
     }
+
+    @Test
+    public void shouldNotCreateFilmWithNullName() {
+        Film newFilm = new Film();
+        newFilm.setDescription("Description");
+        newFilm.setReleaseDate(LocalDate.of(2000, 1, 1));
+        newFilm.setDuration(120);
+
+        assertThrows(ValidationException.class, () -> filmController.create(newFilm));
+    }
+
+    @Test
+    public void shouldNotCreateFilmWithNullReleaseDate() {
+        Film newFilm = new Film();
+        newFilm.setName("Film");
+        newFilm.setDescription("Description");
+        newFilm.setDuration(120);
+
+        assertThrows(ValidationException.class, () -> filmController.create(newFilm));
+    }
 }
