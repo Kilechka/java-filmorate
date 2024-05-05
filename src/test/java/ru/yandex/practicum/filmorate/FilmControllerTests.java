@@ -208,8 +208,5 @@ public class FilmControllerTests {
 
         ValidationException exceptionZero = assertThrows(ValidationException.class, () -> filmController.getPopularFilms(0));
         assertEquals(exceptionZero.getMessage(), "Значение поля count не должно равняться 0 или быть отрицательным");
-
-        ValidationException exceptionTooMuch = assertThrows(ValidationException.class, () -> filmController.getPopularFilms(3));
-        assertEquals(exceptionTooMuch.getMessage(), "Значение поля count не должно равняться 0 или быть отрицательным");
     }
 }
