@@ -15,8 +15,8 @@ import java.util.Map;
 @Component
 public class InMemoryFilmStorage implements FilmStorage {
 
-    final private LocalDate minReleaseDate = LocalDate.of(1895, 12, 28);
-    final private Map<Long, Film> films = new HashMap<>();
+    private final LocalDate minReleaseDate = LocalDate.of(1895, 12, 28);
+    private final Map<Long, Film> films = new HashMap<>();
     private Long idForFilm = 0L;
 
     @Override
