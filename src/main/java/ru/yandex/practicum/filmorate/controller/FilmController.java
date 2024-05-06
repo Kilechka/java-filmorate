@@ -55,6 +55,7 @@ public class FilmController {
     @GetMapping("/popular")
     public Collection<Film> getPopularFilms(@RequestParam(name = "count", defaultValue = "10") int count) {
         if (count < 1) {
+            log.warn("Значение поля count не должно равняться 0 или быть отрицательным");
             throw new ValidationException("Значение поля count не должно равняться 0 или быть отрицательным");
         }
         log.info("Выполняем Get-запрос");
