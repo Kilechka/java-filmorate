@@ -2,14 +2,17 @@ package ru.yandex.practicum.filmorate;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import ru.yandex.practicum.filmorate.controller.FilmController;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.service.FilmService;
+import ru.yandex.practicum.filmorate.storage.FilmStorage;
 import ru.yandex.practicum.filmorate.storage.InMemoryFilmStorage;
 import ru.yandex.practicum.filmorate.storage.InMemoryUserStorage;
+import ru.yandex.practicum.filmorate.storage.UserStorage;
 
 import java.time.LocalDate;
 import java.util.Collection;
@@ -24,10 +27,10 @@ public class FilmControllerTests {
 
     @BeforeEach
     public void beforeEach() {
-        InMemoryFilmStorage inMemoryFilmStorage = new InMemoryFilmStorage();
-        InMemoryUserStorage userStorage = new InMemoryUserStorage();
-        FilmService filmService = new FilmService(inMemoryFilmStorage, userStorage);
-        filmController = new FilmController(inMemoryFilmStorage, filmService);
+        UserStorage userStorage = new InMemoryUserStorage();
+        FilmStorage filmStorage = new InMemoryFilmStorage((InMemoryUserStorage) userStorage);
+        FilmService filmService = new FilmService(filmStorage);
+        filmController = new FilmController(filmService);
         film = new Film();
         film.setName("Film");
         film.setDescription("Description");
@@ -203,8 +206,8 @@ public class FilmControllerTests {
 
     @Test
     public void shouldNotGetPopularFilmBecauseCountIsIncorrect() {
-        ValidationException exceptionNegative = assertThrows(ValidationException.class, () -> filmController.getPopularFilms(-1));
-        assertEquals(exceptionNegative.getMessage(), "Значение поля count не должно равняться 0 или быть отрицательным");
+        ValidationException exception = assertThrows(ValidationException.class, () -> filmController.getPopularFilms(-1));
+        assertEquals("Значение поля count не должно равняться 0 или быть отрицательным", exception.getMessage());
 
         ValidationException exceptionZero = assertThrows(ValidationException.class, () -> filmController.getPopularFilms(0));
         assertEquals(exceptionZero.getMessage(), "Значение поля count не должно равняться 0 или быть отрицательным");

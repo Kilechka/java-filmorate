@@ -3,16 +3,13 @@ package ru.yandex.practicum.filmorate.storage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
-import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
 
-import java.time.LocalDate;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
-@Slf4j
 @Component
+@Slf4j
 public class InMemoryUserStorage implements UserStorage {
 
     private final Map<Long, User> users = new HashMap<>();
@@ -20,7 +17,6 @@ public class InMemoryUserStorage implements UserStorage {
 
     @Override
     public User create(User user) {
-        validate(user);
         user.setId(getNextId());
         users.put(user.getId(), user);
         log.info("Создан пользователь с id = {}", user.getId());
@@ -34,11 +30,6 @@ public class InMemoryUserStorage implements UserStorage {
 
     @Override
     public User updateUser(User newUser) {
-        validate(newUser);
-        if (newUser.getId() == null) {
-            log.warn("Id должен быть указан");
-            throw new ValidationException("Id должен быть указан");
-        }
         if (users.containsKey(newUser.getId())) {
             User user = users.get(newUser.getId());
             user.setName(newUser.getName());
@@ -52,6 +43,56 @@ public class InMemoryUserStorage implements UserStorage {
         throw new NotFoundException("Пользователь с id = " + newUser.getId() + " не найден");
     }
 
+    @Override
+    public User addFriend(Long id, Long userId) {
+        User user = findUserById(id);
+        User friend = findUserById(userId);
+
+        user.getFriends().add(userId);
+        friend.getFriends().add(id);
+        log.info("Пользователь с id {} добавил в друзья пользователя с id {} ", id, userId);
+
+        return friend;
+    }
+
+    @Override
+    public User deleteFriend(Long id, Long userId) {
+        User user = findUserById(id);
+        User friend = findUserById(userId);
+
+        if (user.getFriends().contains(userId)) {
+            user.getFriends().remove(userId);
+            friend.getFriends().remove(id);
+            log.info("Пользователь с id {} удалил из друзей пользователя с id {} ", id, userId);
+        }
+
+        return friend;
+    }
+
+    public Collection<User> getAllFriends(Long id) {
+        User user = findUserById(id);
+        Set<Long> friendsId = user.getFriends();
+        log.info("Получен список друзей пользователя с id " + id);
+
+        return friendsId.stream().map(this::findUserById)
+                .collect(Collectors.toList());
+    }
+
+    public Collection<User> getCommonFriends(Long id, Long otherId) {
+        User user = findUserById(id);
+        User otherUser = findUserById(otherId);
+        Set<Long> userFriendsId = user.getFriends();
+        Set<Long> otherFriendsId = otherUser.getFriends();
+
+        Set<Long> commonFriendsId = new HashSet<>(userFriendsId);
+        commonFriendsId.retainAll(otherFriendsId);
+        log.info("Получен список общих друзей пользователей с id {} и {} ", id, otherId);
+
+        return commonFriendsId.stream()
+                .map(this::findUserById)
+                .collect(Collectors.toSet());
+    }
+
     public User findUserById(Long id) {
         if (!users.containsKey(id)) {
             log.warn("Пользователь с id = " + id + " не найден");
@@ -62,23 +103,5 @@ public class InMemoryUserStorage implements UserStorage {
 
     private Long getNextId() {
         return ++idForUser;
-    }
-
-    private void validate(User user) {
-        if (user.getEmail() == null || user.getEmail().isBlank() || !user.getEmail().contains("@")) {
-            log.warn("Электронная почта не может быть пустой и должна содержать символ @");
-            throw new ValidationException("Электронная почта не может быть пустой и должна содержать символ @");
-        }
-        if (user.getLogin() == null || user.getLogin().isBlank() || user.getLogin().contains(" ")) {
-            log.warn("Логин не может быть пустым и содержать пробелы");
-            throw new ValidationException("Логин не может быть пустым и содержать пробелы");
-        }
-        if (user.getBirthday().isAfter(LocalDate.now())) {
-            log.warn("Дата рождения не может быть в будущем");
-            throw new ValidationException("Дата рождения не может быть в будущем");
-        }
-        if (user.getName() == null || user.getName().isBlank()) {
-            user.setName(user.getLogin());
-        }
     }
 }
