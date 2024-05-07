@@ -9,7 +9,6 @@ import ru.yandex.practicum.filmorate.service.FilmService;
 
 import java.util.Collection;
 
-
 @RestController
 @RequestMapping("/films")
 @Slf4j
@@ -24,31 +23,31 @@ public class FilmController {
 
     @PostMapping
     public Film create(@RequestBody Film film) {
-        log.info("Выполняем Post-запрос");
+        log.info("Получен запрос на создание фильма {}", film);
         return filmService.create(film);
     }
 
     @GetMapping
     public Collection<Film> getAllFilms() {
-        log.info("Выполняем Get-запрос");
+        log.info("Получен запрос на получение списка всех фильмов");
         return filmService.getAllFilms();
     }
 
     @PutMapping
     public Film updateFilm(@RequestBody Film newFilm) {
-        log.info("Выполняем Put-запрос");
+        log.info("Получен запрос на обновление фильма {}", newFilm);
         return filmService.updateFilm(newFilm);
     }
 
     @PutMapping("/{id}/like/{userId}")
     public Film likeTheFilm(@PathVariable Long id, @PathVariable Long userId) {
-        log.info("Выполняем Put-запрос");
+        log.info("Получен запрос 'поставить лайк' от пользователя {} фильму {}", userId, id);
         return filmService.likeTheFilm(id, userId);
     }
 
     @DeleteMapping("/{id}/like/{userId}")
     public Film deleteLike(@PathVariable Long id, @PathVariable Long userId) {
-        log.info("Выполняем Delete-запрос");
+        log.info("Получен запрос на удаление лайка с фильма {} от пользователя {}", id, userId);
         return filmService.deleteLike(id, userId);
     }
 
@@ -58,7 +57,7 @@ public class FilmController {
             log.warn("Значение поля count не должно равняться 0 или быть отрицательным");
             throw new ValidationException("Значение поля count не должно равняться 0 или быть отрицательным");
         }
-        log.info("Выполняем Get-запрос");
+        log.info("Получен запрос на получение списка {} самых популярных фильмов", count);
         return filmService.getPopularFilms(count);
     }
 }

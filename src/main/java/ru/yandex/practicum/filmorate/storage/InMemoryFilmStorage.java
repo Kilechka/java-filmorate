@@ -15,7 +15,6 @@ public class InMemoryFilmStorage implements FilmStorage {
 
     private final Map<Long, Film> films = new HashMap<>();
     private Long idForFilm = 0L;
-    private final InMemoryUserStorage userStorage;
 
     @Override
     public Film create(Film film) {
@@ -46,41 +45,7 @@ public class InMemoryFilmStorage implements FilmStorage {
     }
 
     @Override
-    public Film likeTheFilm(Long id, Long userId) {
-        Film film = findFilmById(id);
-
-        userStorage.findUserById(userId);
-        film.getLikes().add(userId);
-        log.info("Пользователь с id {} поставил лайк фильму с id {}", userId, id);
-
-        return film;
-    }
-
-    @Override
-    public Film deleteLike(Long id, Long userId) {
-        Film film = findFilmById(id);
-
-        userStorage.findUserById(userId);
-        film.getLikes().remove(userId);
-        log.info("Пользователь с id {} удалил лайк у фильма с id {}", userId, id);
-
-        return film;
-    }
-
-    @Override
-    public Collection<Film> getPopularFilms(int count) {
-        List<Film> films  = new ArrayList<>(getAllFilms());
-        films.sort((f1, f2) -> f2.getLikes().size() - f1.getLikes().size());
-        if (count < films.size()) {
-            films = films.subList(0, count);
-        }
-
-        log.info("Получен список из {} самых популярных фильмов", count);
-
-        return films;
-    }
-
-    private Film findFilmById(Long id) {
+    public Film findFilmById(Long id) {
         if (!films.containsKey(id)) {
             log.warn("Фильм с id = " + id + " не найден");
             throw new NotFoundException("Фильм с id = " + id + " не найден");

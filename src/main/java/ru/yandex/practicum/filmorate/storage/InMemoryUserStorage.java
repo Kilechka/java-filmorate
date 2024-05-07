@@ -6,7 +6,6 @@ import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.User;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Component
 @Slf4j
@@ -44,55 +43,6 @@ public class InMemoryUserStorage implements UserStorage {
     }
 
     @Override
-    public User addFriend(Long id, Long userId) {
-        User user = findUserById(id);
-        User friend = findUserById(userId);
-
-        user.getFriends().add(userId);
-        friend.getFriends().add(id);
-        log.info("Пользователь с id {} добавил в друзья пользователя с id {} ", id, userId);
-
-        return friend;
-    }
-
-    @Override
-    public User deleteFriend(Long id, Long userId) {
-        User user = findUserById(id);
-        User friend = findUserById(userId);
-
-        if (user.getFriends().contains(userId)) {
-            user.getFriends().remove(userId);
-            friend.getFriends().remove(id);
-            log.info("Пользователь с id {} удалил из друзей пользователя с id {} ", id, userId);
-        }
-
-        return friend;
-    }
-
-    public Collection<User> getAllFriends(Long id) {
-        User user = findUserById(id);
-        Set<Long> friendsId = user.getFriends();
-        log.info("Получен список друзей пользователя с id " + id);
-
-        return friendsId.stream().map(this::findUserById)
-                .collect(Collectors.toList());
-    }
-
-    public Collection<User> getCommonFriends(Long id, Long otherId) {
-        User user = findUserById(id);
-        User otherUser = findUserById(otherId);
-        Set<Long> userFriendsId = user.getFriends();
-        Set<Long> otherFriendsId = otherUser.getFriends();
-
-        Set<Long> commonFriendsId = new HashSet<>(userFriendsId);
-        commonFriendsId.retainAll(otherFriendsId);
-        log.info("Получен список общих друзей пользователей с id {} и {} ", id, otherId);
-
-        return commonFriendsId.stream()
-                .map(this::findUserById)
-                .collect(Collectors.toSet());
-    }
-
     public User findUserById(Long id) {
         if (!users.containsKey(id)) {
             log.warn("Пользователь с id = " + id + " не найден");

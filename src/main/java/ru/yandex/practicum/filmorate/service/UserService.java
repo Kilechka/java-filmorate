@@ -9,6 +9,9 @@ import ru.yandex.practicum.filmorate.storage.UserStorage;
 
 import java.time.LocalDate;
 import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -23,11 +26,12 @@ public class UserService {
 
     public User create(User user) {
         validate(user);
-        userStorage.create(user);
-        return user;
+        log.info("Создаем нового пользователя {}", user);
+        return userStorage.create(user);
     }
 
     public Collection<User> getAllUsers() {
+        log.info("Получаем список всех пользователей");
         return userStorage.getAllUsers();
     }
 
@@ -37,23 +41,56 @@ public class UserService {
             log.warn("Id должен быть указан");
             throw new ValidationException("Id должен быть указан");
         }
+        log.info("Обновляем пользователя {}", newUser);
         return userStorage.updateUser(newUser);
     }
 
     public User addFriend(Long id, Long userId) {
-        return userStorage.addFriend(id, userId);
+        User user = userStorage.findUserById(id);
+        User friend = userStorage.findUserById(userId);
+
+        user.getFriends().add(userId);
+        friend.getFriends().add(id);
+        log.info("Пользователь с id {} добавил в друзья пользователя с id {} ", id, userId);
+
+        return friend;
     }
 
     public User deleteFriend(Long id, Long userId) {
-        return userStorage.deleteFriend(id, userId);
+        User user = userStorage.findUserById(id);
+        User friend = userStorage.findUserById(userId);
+
+        if (user.getFriends().contains(userId)) {
+            user.getFriends().remove(userId);
+            friend.getFriends().remove(id);
+            log.info("Пользователь с id {} удалил из друзей пользователя с id {} ", id, userId);
+        }
+
+        return friend;
     }
 
     public Collection<User> getAllFriends(Long id) {
-        return userStorage.getAllFriends(id);
+        User user = userStorage.findUserById(id);
+        Set<Long> friendsId = user.getFriends();
+        log.info("Получен список друзей пользователя с id " + id);
+
+        return friendsId.stream().map(userStorage::findUserById)
+                .collect(Collectors.toList());
     }
 
     public Collection<User> getCommonFriends(Long id, Long otherId) {
-        return userStorage.getCommonFriends(id, otherId);
+        User user = userStorage.findUserById(id);
+        User otherUser = userStorage.findUserById(otherId);
+        Set<Long> userFriendsId = user.getFriends();
+        Set<Long> otherFriendsId = otherUser.getFriends();
+
+        Set<Long> commonFriendsId = new HashSet<>(userFriendsId);
+        commonFriendsId.retainAll(otherFriendsId);
+        log.info("Получен список общих друзей пользователей с id {} и {} ", id, otherId);
+
+        return commonFriendsId.stream()
+                .map(userStorage::findUserById)
+                .collect(Collectors.toSet());
     }
 
     private void validate(User user) {
@@ -72,5 +109,6 @@ public class UserService {
         if (user.getName() == null || user.getName().isBlank()) {
             user.setName(user.getLogin());
         }
+        log.info("Валидация пройдена");
     }
 }

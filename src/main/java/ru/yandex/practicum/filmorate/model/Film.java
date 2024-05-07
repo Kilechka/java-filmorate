@@ -7,7 +7,6 @@ import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Set;
 
-
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Film {
