@@ -1,87 +1,63 @@
 package ru.yandex.practicum.filmorate.controller;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
-import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.service.FilmService;
 
-import java.time.LocalDate;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/films")
 @Slf4j
 public class FilmController {
 
-    private final LocalDate minReleaseDate = LocalDate.of(1895, 12, 28);
-    private Map<Long, Film> films = new HashMap<>();
-    private Long idForFilm = 0L;
+    private final FilmService filmService;
 
+    @Autowired
+    public FilmController(FilmService filmService) {
+        this.filmService = filmService;
+    }
 
     @PostMapping
     public Film create(@RequestBody Film film) {
-        validate(film);
-        film.setId(getNextId());
-        films.put(film.getId(), film);
-        log.info("Создан фильм с id = {}", film.getId());
-        return film;
+        log.info("Получен запрос на создание фильма {}", film);
+        return filmService.create(film);
     }
 
     @GetMapping
     public Collection<Film> getAllFilms() {
-        return films.values();
+        log.info("Получен запрос на получение списка всех фильмов");
+        return filmService.getAllFilms();
     }
 
     @PutMapping
     public Film updateFilm(@RequestBody Film newFilm) {
-        validate(newFilm);
-        if (newFilm.getId() == null) {
-            throw new ValidationException("Id должен быть указан");
-        }
-        if (films.containsKey(newFilm.getId())) {
-            Film film = films.get(newFilm.getId());
-            film.setName(newFilm.getName());
-            film.setDescription(newFilm.getDescription());
-            film.setReleaseDate(newFilm.getReleaseDate());
-            film.setDuration(newFilm.getDuration());
-            log.info("Обновлен фильм с id = {}", newFilm.getId());
-            return film;
-        }
-        log.warn("Фильм с id = " + newFilm.getId() + " не найден");
-        throw new NotFoundException("Фильм с id = " + newFilm.getId() + " не найден");
+        log.info("Получен запрос на обновление фильма {}", newFilm);
+        return filmService.updateFilm(newFilm);
     }
 
-    private Long getNextId() {
-        return ++idForFilm;
+    @PutMapping("/{id}/like/{userId}")
+    public Film likeTheFilm(@PathVariable Long id, @PathVariable Long userId) {
+        log.info("Получен запрос 'поставить лайк' от пользователя {} фильму {}", userId, id);
+        return filmService.likeTheFilm(id, userId);
     }
 
-    private void validate(Film film) {
-        if (film.getName() == null || film.getName().isBlank()) {
-            log.warn("Название не может быть пустым");
-            throw new ValidationException("Название не может быть пустым");
+    @DeleteMapping("/{id}/like/{userId}")
+    public Film deleteLike(@PathVariable Long id, @PathVariable Long userId) {
+        log.info("Получен запрос на удаление лайка с фильма {} от пользователя {}", id, userId);
+        return filmService.deleteLike(id, userId);
+    }
+
+    @GetMapping("/popular")
+    public Collection<Film> getPopularFilms(@RequestParam(name = "count", defaultValue = "10") int count) {
+        if (count < 1) {
+            log.warn("Значение поля count не должно равняться 0 или быть отрицательным");
+            throw new ValidationException("Значение поля count не должно равняться 0 или быть отрицательным");
         }
-        if (film.getDescription() == null || film.getDescription().isBlank()) {
-            log.warn("Описание не может быть пустым");
-            throw new ValidationException("Описание не может быть пустым");
-        }
-        if (film.getDescription().length() > 200) {
-            log.warn("Максимальная длина описания — 200 символов");
-            throw new ValidationException("Максимальная длина описания — 200 символов");
-        }
-        if (film.getReleaseDate() == null) {
-            log.warn("Дата релиза не может быть пустой");
-            throw new ValidationException("Дата релиза не может быть пустой");
-        }
-        if (film.getReleaseDate().isBefore(minReleaseDate)) {
-            log.warn("Дата релиза должна быть не раньше 28 декабря 1895 года");
-            throw new ValidationException("Дата релиза должна быть не раньше 28 декабря 1895 года");
-        }
-        if (film.getDuration() < 0) {
-            log.warn("Продолжительность фильма должна быть положительным числом");
-            throw new ValidationException("Продолжительность фильма должна быть положительным числом");
-        }
+        log.info("Получен запрос на получение списка {} самых популярных фильмов", count);
+        return filmService.getPopularFilms(count);
     }
 }

@@ -6,8 +6,15 @@ import ru.yandex.practicum.filmorate.controller.FilmController;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.service.FilmService;
+import ru.yandex.practicum.filmorate.storage.FilmStorage;
+import ru.yandex.practicum.filmorate.storage.InMemoryFilmStorage;
+import ru.yandex.practicum.filmorate.storage.InMemoryUserStorage;
+import ru.yandex.practicum.filmorate.storage.UserStorage;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -19,12 +26,21 @@ public class FilmControllerTests {
 
     @BeforeEach
     public void beforeEach() {
-        filmController = new FilmController();
+        UserStorage userStorage = new InMemoryUserStorage();
+        FilmStorage filmStorage = new InMemoryFilmStorage();
+        FilmService filmService = new FilmService(filmStorage, userStorage);
+        filmController = new FilmController(filmService);
         film = new Film();
         film.setName("Film");
         film.setDescription("Description");
         film.setReleaseDate(LocalDate.of(2000, 1, 1));
         film.setDuration(120);
+        User user = new User();
+        user.setLogin("lodin");
+        user.setName("name");
+        user.setEmail("email@example.com");
+        user.setBirthday(LocalDate.of(1999, 9, 15));
+        userStorage.create(user);
     }
 
     @Test
@@ -150,5 +166,49 @@ public class FilmControllerTests {
         newFilm.setDuration(120);
 
         assertThrows(ValidationException.class, () -> filmController.create(newFilm));
+    }
+
+    @Test
+    public void shouldLikeTheFilm() {
+        filmController.create(film);
+        filmController.likeTheFilm(1L, 1L);
+
+        assertTrue(film.getLikes().contains(1L));
+        assertTrue(film.getLikes().size() == 1);
+    }
+
+    @Test
+    public void shouldDeleteLike() {
+        filmController.create(film);
+        filmController.likeTheFilm(1L, 1L);
+        filmController.deleteLike(1L, 1L);
+
+        assertTrue(film.getLikes().isEmpty());
+        assertTrue(film.getLikes().size() == 0);
+    }
+
+    @Test
+    public void shouldGetPopularFilms() {
+        filmController.create(film);
+        Collection<Film> bestFilms = filmController.getPopularFilms(1);
+
+        assertFalse(bestFilms.isEmpty());
+        assertTrue(bestFilms.contains(film));
+    }
+
+    @Test
+    public void shouldNotGetFilmThatNotFound() {
+        NotFoundException exception = assertThrows(NotFoundException.class, () -> filmController.likeTheFilm(1L, 1L));
+
+        assertEquals(exception.getMessage(), "Фильм с id = 1 не найден");
+    }
+
+    @Test
+    public void shouldNotGetPopularFilmBecauseCountIsIncorrect() {
+        ValidationException exception = assertThrows(ValidationException.class, () -> filmController.getPopularFilms(-1));
+        assertEquals("Значение поля count не должно равняться 0 или быть отрицательным", exception.getMessage());
+
+        ValidationException exceptionZero = assertThrows(ValidationException.class, () -> filmController.getPopularFilms(0));
+        assertEquals(exceptionZero.getMessage(), "Значение поля count не должно равняться 0 или быть отрицательным");
     }
 }
