@@ -4,7 +4,9 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Data
@@ -18,4 +20,5 @@ public class Film {
     private Integer duration;
     @JsonIgnoreProperties({"likes"})
     private Set<Long> likes = new HashSet<>();
+    private List<Genre> genres = new ArrayList<>();
 }
