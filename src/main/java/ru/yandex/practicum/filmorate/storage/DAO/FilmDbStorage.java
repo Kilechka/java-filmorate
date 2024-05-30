@@ -42,6 +42,7 @@ public class FilmDbStorage implements FilmStorage {
         this.mpaService = mpaService;
         this.genreStorage = genreStorage;
     }
+
     private static final String CREATE_FILM_QUERY = "INSERT INTO films(name, description, releaseDate, duration, mpa_id) " +
             "VALUES (?, ?, ?, ?, ?)";
     private static final String GET_ALL_FILMS_QUERY = "SELECT * FROM films";
