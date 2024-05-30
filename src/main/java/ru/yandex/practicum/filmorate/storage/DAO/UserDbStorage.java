@@ -35,6 +35,9 @@ public class UserDbStorage implements UserStorage {
             "JOIN friendship AS f ON u.user_id = f.friend_id " +
             "WHERE f.user_id = ?";
     private static final String DELETE_FRIEND = "DELETE FROM friendship WHERE user_id = ? AND friend_id = ?";
+    private static final String COMMON_FRIENDS_QUERY = "SELECT u.* FROM users u " +
+            "JOIN friendship f1 ON u.user_id = f1.friend_id AND f1.user_id = ? " +
+            "JOIN friendship f2 ON u.user_id = f2.friend_id AND f2.user_id = ? ";
 
     @Override
     public User create(User user) {
@@ -116,9 +119,9 @@ public class UserDbStorage implements UserStorage {
     public Collection<User> getCommonFriends(Long id, Long otherId) {
         User user = findUserById(id);
         User otherUser = findUserById(otherId);
-        List<User> friends = jdbcTemplate.query(GET_ALL_FRIENDS_QUERY, this::makeUser, id);
-        List<User> otherFriends = jdbcTemplate.query(GET_ALL_FRIENDS_QUERY, this::makeUser, otherId);
-        friends.retainAll(otherFriends);
+
+        List<User> friends = jdbcTemplate.query(COMMON_FRIENDS_QUERY, this::makeUser, id, otherId);
+
         log.info("Получен список общих друзей пользователей с id {} и {} ", id, otherId);
         return friends;
     }

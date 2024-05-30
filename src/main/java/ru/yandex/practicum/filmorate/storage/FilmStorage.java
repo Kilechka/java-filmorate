@@ -14,9 +14,5 @@ public interface FilmStorage {
 
     Film findFilmById(Long id);
 
-    Film likeTheFilm(Long id, Long userId);
-
-    Film deleteLike(Long id, Long userId);
-
     Collection<Film> getPopularFilms(int count);
 }

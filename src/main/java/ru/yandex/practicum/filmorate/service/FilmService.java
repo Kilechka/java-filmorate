@@ -7,7 +7,9 @@ import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genre;
+import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.FilmStorage;
+import ru.yandex.practicum.filmorate.storage.LikeStorage;
 import ru.yandex.practicum.filmorate.storage.UserStorage;
 
 import java.time.LocalDate;
@@ -20,12 +22,14 @@ public class FilmService {
 
     private final FilmStorage filmStorage;
     private final UserStorage userStorage;
+    private final LikeStorage likeStorage;
     private final LocalDate minReleaseDate = LocalDate.of(1895, 12, 28);
 
     @Autowired
-    public FilmService(@Qualifier("FilmDbStorage") FilmStorage filmStorage, @Qualifier("UserDbStorage") UserStorage userStorage, GenreService genreService, MpaService mpaService) {
+    public FilmService(@Qualifier("FilmDbStorage") FilmStorage filmStorage, @Qualifier("UserDbStorage") UserStorage userStorage, LikeStorage likeStorage) {
         this.filmStorage = filmStorage;
         this.userStorage = userStorage;
+        this.likeStorage = likeStorage;
     }
 
     public Film create(Film film) {
@@ -55,15 +59,18 @@ public class FilmService {
     }
 
     public Film likeTheFilm(Long id, Long userId) {
+        Film film = filmStorage.findFilmById(id);
+        User user = userStorage.findUserById(userId);
         log.info("Пользователь с id {} ставит лайк фильму с id {}", userId, id);
-        return filmStorage.likeTheFilm(id, userId);
+        return likeStorage.likeTheFilm(film, userId);
     }
 
     public Film deleteLike(Long id, Long userId) {
         Film film = filmStorage.findFilmById(id);
+        User user = userStorage.findUserById(userId);
         userStorage.findUserById(userId);
 
-        filmStorage.deleteLike(id, userId);
+        likeStorage.deleteLike(film, userId);
         log.info("Пользователь с id {} удаляет лайк у фильма с id {}", userId, id);
 
         return film;
@@ -101,6 +108,9 @@ public class FilmService {
         if (film.getDuration() < 0) {
             log.warn("Продолжительность фильма должна быть положительным числом");
             throw new ValidationException("Продолжительность фильма должна быть положительным числом");
+        }
+        if (film.getMpa() == null) {
+            throw new ValidationException("Рейтинг не может быть пустым");
         }
         if (film.getMpa().getId() > 5 || film.getMpa().getId() < 1) {
             throw new ValidationException("Указан некорректный рейтинг");

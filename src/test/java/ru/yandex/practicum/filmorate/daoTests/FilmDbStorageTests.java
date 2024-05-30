@@ -16,6 +16,7 @@ import ru.yandex.practicum.filmorate.service.GenreService;
 import ru.yandex.practicum.filmorate.service.MpaService;
 import ru.yandex.practicum.filmorate.storage.DAO.FilmDbStorage;
 import ru.yandex.practicum.filmorate.storage.DAO.UserDbStorage;
+import ru.yandex.practicum.filmorate.storage.LikeStorage;
 
 import java.time.LocalDate;
 import java.util.Collection;
@@ -36,6 +37,7 @@ public class FilmDbStorageTests {
     private final MpaService mpaService;
     private final FilmService filmService;
     private final GenreService genreService;
+    private final LikeStorage likeStorage;
     private Film film1;
     private Film film2;
     private Film film3;
@@ -139,8 +141,9 @@ public class FilmDbStorageTests {
     public void shouldLikeTheFilm() {
         filmService.likeTheFilm(1L, 1L);
 
-        assertTrue(filmDbStorage.getFilmsLikes(1L).size() == 1);
-        assertTrue(filmDbStorage.getFilmsLikes(1L).contains(1));
+        assertTrue(likeStorage.getFilmsLikes(1L).size() == 1);
+        assertTrue(filmDbStorage.findFilmById(1L).getLikes().contains(1L));
+        assertTrue(likeStorage.getFilmsLikes(1L).contains(1L));
     }
 
     @Test
@@ -172,4 +175,3 @@ public class FilmDbStorageTests {
         assertEquals(3L, popularFilms.get(2).getId());
     }
 }
-

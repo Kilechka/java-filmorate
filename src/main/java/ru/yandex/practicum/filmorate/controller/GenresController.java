@@ -15,7 +15,7 @@ import java.util.Collection;
 @RequestMapping("/genres")
 @Slf4j
 public class GenresController {
-    GenreService genreService;
+    private final GenreService genreService;
 
     @Autowired
     public GenresController(GenreService genreService) {

@@ -3,21 +3,18 @@ package ru.yandex.practicum.filmorate.storage.DAO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
-import org.springframework.jdbc.support.rowset.SqlRowSet;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genre;
 import ru.yandex.practicum.filmorate.model.Mpa;
-import ru.yandex.practicum.filmorate.model.User;
-import ru.yandex.practicum.filmorate.service.GenreService;
-import ru.yandex.practicum.filmorate.service.MpaService;
 import ru.yandex.practicum.filmorate.storage.FilmStorage;
 import ru.yandex.practicum.filmorate.storage.GenreStorage;
-import ru.yandex.practicum.filmorate.storage.UserStorage;
+import ru.yandex.practicum.filmorate.storage.LikeStorage;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -30,34 +27,32 @@ import java.util.*;
 @Qualifier("FilmDbStorage")
 public class FilmDbStorage implements FilmStorage {
 
-    private final UserStorage userStorage;
     private final JdbcTemplate jdbcTemplate;
-    private final MpaService mpaService;
     private final GenreStorage genreStorage;
+    private final LikeStorage likeStorage;
 
     @Autowired
-    public FilmDbStorage(@Qualifier("UserDbStorage") UserStorage userStorage, JdbcTemplate jdbcTemplate, MpaService mpaService, GenreService genreService, GenreStorage genreStorage) {
-        this.userStorage = userStorage;
+    public FilmDbStorage(JdbcTemplate jdbcTemplate, GenreStorage genreStorage, LikeStorage likeStorage) {
         this.jdbcTemplate = jdbcTemplate;
-        this.mpaService = mpaService;
         this.genreStorage = genreStorage;
+        this.likeStorage = likeStorage;
     }
 
     private static final String CREATE_FILM_QUERY = "INSERT INTO films(name, description, releaseDate, duration, mpa_id) " +
             "VALUES (?, ?, ?, ?, ?)";
-    private static final String GET_ALL_FILMS_QUERY = "SELECT * FROM films";
-    private static final String UPDATE_FILM_QUERY = "UPDATE films SET name = ?, description = ?, releaseDate = ?, duration = ?, mpa_id = ? WHERE film_id = ?";
-    private static final String FIND_BY_ID_QUERY = "SELECT * FROM films WHERE film_id = ?";
-    private static final String LIKE_QUERY = "INSERT INTO film_likes(user_id, film_id) VALUES (?, ?)";
-    private static final String DELETE_LIKE_QUERY = "DELETE FROM film_likes WHERE user_id = ? AND film_id = ?";
-    private static final String ADD_GENRES_QUERY = "INSERT INTO film_genre(film_id, genre_id) VALUES (?, ?)";
-    private static final String GET_POPULAR_QUERY = "SELECT f.*, COUNT (DISTINCT fl.user_id) as likes_count " +
-            "FROM films f " +
-            "JOIN film_likes fl ON f.film_id = fl.film_id " +
+    private static final String GET_ALL_FILMS_QUERY = "SELECT f.*, m.name as mpa_name " +
+            "FROM films f LEFT JOIN mpa m ON f.mpa_id = m.mpa_id";
+    private static final String UPDATE_FILM_QUERY = "UPDATE films SET name = ?, description = ?, releaseDate = ?, duration = ?, mpa_id = ? " +
+            "WHERE film_id = ?";
+    private static final String FIND_BY_ID_QUERY = "SELECT f.*, m.name as mpa_name " +
+            "FROM films f LEFT JOIN mpa m ON f.mpa_id = m.mpa_id WHERE f.film_id = ?";
+    private static final String ADD_GENRES_QUERY = "INSERT INTO film_genre(film_id, genre_id) " +
+            "VALUES (?, ?)";
+    private static final String GET_POPULAR_QUERY = "SELECT f.*, COUNT (DISTINCT fl.user_id) as likes_count, mpa.name as mpa_name " +
+            "FROM films f JOIN film_likes fl ON f.film_id = fl.film_id " +
+            "LEFT JOIN mpa ON f.mpa_id = mpa.mpa_id " +
             "GROUP BY f.film_id " +
-            "ORDER BY likes_count DESC " +
-            "LIMIT ?";
-    private static final String GET_LIKES_QUERY = "SELECT * FROM film_likes";
+            "ORDER BY likes_count DESC LIMIT ?";
 
     @Override
     public Film create(Film film) {
@@ -80,7 +75,6 @@ public class FilmDbStorage implements FilmStorage {
         }, keyHolder);
         film.setId(keyHolder.getKey().longValue());
         if (!film.getGenres().isEmpty()) {
-            log.info("добавляем жанры {}", genres);
             addGenres(film);
             log.info("добавляем жанры {}", genres);
         }
@@ -99,9 +93,7 @@ public class FilmDbStorage implements FilmStorage {
         if (oldFilm == null) {
             throw new NotFoundException("Фильм с id = {} не найден" + newFilm.getId());
         }
-        KeyHolder keyHolder = new GeneratedKeyHolder();
-        Mpa mpa = newFilm.getMpa();
-        Set<Genre> genres = null;
+        Set<Genre> genres;
         if (!newFilm.getGenres().isEmpty()) {
             log.info("добавляем имена жанрам");
             genres = addNameToGenre(newFilm.getGenres());
@@ -134,42 +126,9 @@ public class FilmDbStorage implements FilmStorage {
     }
 
     @Override
-    public Film likeTheFilm(Long id, Long userId) {
-        Film film = findFilmById(id);
-        User user = userStorage.findUserById(userId);
-
-        jdbcTemplate.update(LIKE_QUERY, userId, id);
-        log.info("Пользователь с id {} поставил лайк фильму с id {}", userId, id);
-
-        return film;
-    }
-
-    @Override
-    public Film deleteLike(Long id, Long userId) {
-        Film film = findFilmById(id);
-        User user = userStorage.findUserById(userId);
-
-        jdbcTemplate.update(DELETE_LIKE_QUERY, userId, id);
-        log.info("Пользователь с id {} удалил лайк у фильма с id {}", userId, id);
-        return film;
-    }
-
-    @Override
     public Collection<Film> getPopularFilms(int count) {
         log.info("Получен список из {} самых популярных фильмов", count);
         return jdbcTemplate.query(GET_POPULAR_QUERY, this::makeFilm, count);
-    }
-
-    public Collection<Integer> getFilmsLikes(Long id) {
-        List<Integer> likes = new ArrayList<>();
-
-        SqlRowSet rows = jdbcTemplate.queryForRowSet(GET_LIKES_QUERY);
-        while (rows.next()) {
-            if (rows.getInt("film_id") == id) {
-                likes.add(rows.getInt("user_id"));
-            }
-        }
-        return likes;
     }
 
     private Film makeFilm(ResultSet rs, int rowNum) throws SQLException {
@@ -179,8 +138,8 @@ public class FilmDbStorage implements FilmStorage {
         film.setDescription(rs.getString("description"));
         film.setReleaseDate(rs.getDate("releaseDate").toLocalDate());
         film.setDuration(rs.getInt("duration"));
-        Mpa mpa = mpaService.getMpaById(rs.getInt("mpa_id"));
-        film.setMpa(mpa);
+        film.setMpa(new Mpa(rs.getInt("mpa_id"), rs.getString("mpa_name")));
+        film.setLikes(likeStorage.getFilmsLikes(rs.getLong("film_id")));
         Set<Genre> genres = genreStorage.getFilmGenres(rs.getLong("film_id"));
         if (genres.size() != 0) {
             film.setGenres(genreStorage.getFilmGenres(rs.getLong("film_id")));
@@ -189,9 +148,19 @@ public class FilmDbStorage implements FilmStorage {
     }
 
     private void addGenres(Film film) {
-        for (Genre genre : film.getGenres()) {
-            jdbcTemplate.update(ADD_GENRES_QUERY, film.getId(), genre.getId());
-        }
+        List<Genre> genres = new ArrayList<>(film.getGenres());
+        jdbcTemplate.batchUpdate(ADD_GENRES_QUERY, new BatchPreparedStatementSetter() {
+            @Override
+            public void setValues(PreparedStatement ps, int i) throws SQLException {
+                ps.setInt(1, Math.toIntExact(film.getId()));
+                ps.setInt(2, genres.get(i).getId());
+            }
+
+            @Override
+            public int getBatchSize() {
+                return genres.size();
+            }
+        });
     }
 
     private Set<Genre> addNameToGenre(Set<Genre> genres) {
