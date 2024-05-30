@@ -75,7 +75,7 @@ public class FilmService {
     }
 
     private void validate(Film film) {
-        Optional<Genre> wrongGenres= film.getGenres().stream()
+        Optional<Genre> wrongGenres = film.getGenres().stream()
                 .filter(genre -> genre.getId() > 6 || genre.getId() < 1)
                 .findFirst();
         if (film.getName() == null || film.getName().isBlank()) {
