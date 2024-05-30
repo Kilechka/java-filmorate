@@ -39,6 +39,12 @@ public class FilmController {
         return filmService.updateFilm(newFilm);
     }
 
+    @GetMapping("/{id}")
+    public Film findFilmById(@PathVariable Long id) {
+        log.info("Получен запрос 'получить фильм по id' с id = {}", id);
+        return filmService.findFilmById(id);
+    }
+
     @PutMapping("/{id}/like/{userId}")
     public Film likeTheFilm(@PathVariable Long id, @PathVariable Long userId) {
         log.info("Получен запрос 'поставить лайк' от пользователя {} фильму {}", userId, id);

@@ -38,6 +38,12 @@ public class UserController {
         return userService.updateUser(newUser);
     }
 
+    @GetMapping("/{id}")
+    public User findUserById(Long id) {
+        log.info("Получен запрос на получение пользователя с id = {}", id);
+        return userService.findUserById(id);
+    }
+
     @PutMapping("/{id}/friends/{friendId}")
     public User addFriend(@PathVariable Long id, @PathVariable Long friendId) {
         log.info("Получен запрос от пользователя {} на добавление пользователя {} в друзья", id, friendId);
