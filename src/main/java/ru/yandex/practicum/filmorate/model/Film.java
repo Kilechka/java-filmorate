@@ -17,7 +17,7 @@ public class Film {
     private LocalDate releaseDate;
     private Integer duration;
     private Mpa mpa;
-    @JsonIgnoreProperties({"likes"})
-    private Set<Long> likes = new HashSet<>();
     private Set<Genre> genres = new HashSet<>();
+    @JsonIgnoreProperties({"likesCount"})
+    private Integer likesCount;
 }

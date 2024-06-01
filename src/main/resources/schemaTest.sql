@@ -21,7 +21,8 @@ CREATE TABLE IF NOT EXISTS films (
   description varchar(200) NOT NULL,
   releaseDate date NOT NULL,
   duration integer NOT NULL,
-  mpa_id integer NOT NULL
+  mpa_id integer NOT NULL,
+  likes_count integer
 );
 
 CREATE TABLE IF NOT EXISTS film_likes (
@@ -64,11 +65,3 @@ INSERT INTO genre (name) VALUES ('Мультфильм');
 INSERT INTO genre (name) VALUES ('Триллер');
 INSERT INTO genre (name) VALUES ('Документальный');
 INSERT INTO genre (name) VALUES ('Боевик');
-
-
-
-
-
-
-
-

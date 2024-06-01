@@ -20,7 +20,8 @@ CREATE TABLE IF NOT EXISTS films (
   description varchar(200) NOT NULL,
   releaseDate date NOT NULL,
   duration integer NOT NULL,
-  mpa_id integer NOT NULL
+  mpa_id integer NOT NULL,
+  likes_count integer
 );
 
 CREATE TABLE IF NOT EXISTS film_likes (
@@ -50,5 +51,3 @@ ALTER TABLE films ADD FOREIGN KEY (mpa_id) REFERENCES mpa (mpa_id);
 ALTER TABLE friendship ADD FOREIGN KEY (user_id) REFERENCES users (user_id);
 
 ALTER TABLE friendship ADD FOREIGN KEY (friend_id) REFERENCES users (user_id);
-
-

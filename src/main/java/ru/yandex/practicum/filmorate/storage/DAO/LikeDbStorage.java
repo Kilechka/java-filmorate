@@ -24,7 +24,7 @@ public class LikeDbStorage implements LikeStorage {
     @Override
     public Film likeTheFilm(Film film, Long userId) {
         jdbcTemplate.update(LIKE_QUERY, userId, film.getId());
-        film.getLikes().add(userId);
+        jdbcTemplate.update("UPDATE films SET likes_count = likes_count + 1 WHERE film_id = ?", film.getId());
         log.info("Пользователь с id {} поставил лайк фильму с id {}", userId, film.getId());
 
         return film;
@@ -33,8 +33,9 @@ public class LikeDbStorage implements LikeStorage {
     @Override
     public Film deleteLike(Film film, Long userId) {
         jdbcTemplate.update(DELETE_LIKE_QUERY, userId, film.getId());
-        film.getLikes().remove(userId);
+        jdbcTemplate.update("UPDATE films SET likes_count = likes_count - 1 WHERE film_id = ?", film.getId());
         log.info("Пользователь с id {} удалил лайк у фильма с id {}", userId, film.getId());
+
         return film;
     }
 

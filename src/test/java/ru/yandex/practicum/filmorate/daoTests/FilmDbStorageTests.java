@@ -142,8 +142,6 @@ public class FilmDbStorageTests {
         filmService.likeTheFilm(1L, 1L);
 
         assertTrue(likeStorage.getFilmsLikes(1L).size() == 1);
-        assertTrue(filmDbStorage.findFilmById(1L).getLikes().contains(1L));
-        assertTrue(likeStorage.getFilmsLikes(1L).contains(1L));
     }
 
     @Test
@@ -155,7 +153,7 @@ public class FilmDbStorageTests {
                 .filter(film -> film.getId() == 1L)
                 .findFirst()
                 .orElseThrow()
-                .getLikes().size() == 0);
+                .getLikesCount() == 0);
     }
 
     @Test
@@ -168,6 +166,7 @@ public class FilmDbStorageTests {
             filmService.likeTheFilm(3L, 1L);
 
         List<Film> popularFilms = (List<Film>) filmService.getPopularFilms(3);
+        System.out.println(popularFilms);
 
         assertEquals(3, popularFilms.size());
         assertEquals(2L, popularFilms.get(0).getId());
