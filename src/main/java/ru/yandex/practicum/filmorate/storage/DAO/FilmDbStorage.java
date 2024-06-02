@@ -106,7 +106,8 @@ public class FilmDbStorage implements FilmStorage {
                 film.setLikesCount(rs.getInt("likes_count"));
                 films.add(film);
                 filmsId.add(filmId);
-            } if (rs.getString("genre_name") != null) {
+            }
+            if (rs.getString("genre_name") != null) {
                 Genre genre = new Genre(rs.getInt("genre_id"), rs.getString("genre_name"));
                 Set<Genre> filmGenres = genresWithFilms.get(filmId);
                 if (filmGenres == null) {
