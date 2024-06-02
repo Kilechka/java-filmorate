@@ -165,10 +165,10 @@ public class FilmDbStorageTests {
             filmService.likeTheFilm(2L, 2L);
             filmService.likeTheFilm(3L, 1L);
 
-        List<Film> popularFilms = (List<Film>) filmService.getPopularFilms(2);
+        List<Film> popularFilms = (List<Film>) filmService.getPopularFilms(3);
         System.out.println(popularFilms);
 
-        assertEquals(2, popularFilms.size());
+        assertEquals(3, popularFilms.size());
         assertEquals(2L, popularFilms.get(0).getId());
         assertEquals(1L, popularFilms.get(1).getId());
     }

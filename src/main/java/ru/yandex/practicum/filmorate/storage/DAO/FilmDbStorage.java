@@ -37,12 +37,6 @@ public class FilmDbStorage implements FilmStorage {
 
     private static final String CREATE_FILM_QUERY = "INSERT INTO films(name, description, releaseDate, duration, mpa_id) " +
             "VALUES (?, ?, ?, ?, ?)";
-    private static final String GET_ALL_QUERY = "SELECT f.*, g.genre_id, g.name AS genre_name, m.name as mpa_name " +
-            "FROM films f " +
-            "LEFT JOIN film_genre fg ON f.film_id = fg.film_id " +
-            "LEFT JOIN genre g ON fg.genre_id = g.genre_id " +
-            "LEFT JOIN mpa m ON f.mpa_id = m.mpa_id " +
-            "ORDER BY f.film_id ";
     private static final String UPDATE_FILM_QUERY = "UPDATE films SET name = ?, description = ?, releaseDate = ?, duration = ?, mpa_id = ?, likes_count = ? " +
             "WHERE film_id = ?";
 
@@ -50,13 +44,19 @@ public class FilmDbStorage implements FilmStorage {
             "WHERE f.film_id = ?";
     private static final String ADD_GENRES_QUERY = "INSERT INTO film_genre(film_id, genre_id) " +
             "VALUES (?, ?)";
+    private static final String GET_ALL_QUERY = "SELECT f.*, g.genre_id, g.name AS genre_name, m.name as mpa_name " +
+            "FROM films f " +
+            "LEFT JOIN film_genre fg ON f.film_id = fg.film_id " +
+            "LEFT JOIN genre g ON fg.genre_id = g.genre_id " +
+            "LEFT JOIN mpa m ON f.mpa_id = m.mpa_id " +
+            "ORDER BY likes_count DESC, f.film_id ASC ";
+
     private static final String GET_POPULAR_QUERY = "SELECT f.*, g.genre_id, g.name AS genre_name, m.name as mpa_name " +
             "FROM films f " +
             "LEFT JOIN film_genre fg ON f.film_id = fg.film_id " +
             "LEFT JOIN genre g ON fg.genre_id = g.genre_id " +
             "LEFT JOIN mpa m ON f.mpa_id = m.mpa_id " +
-            "ORDER BY likes_count DESC, f.film_id ASC " +
-            "LIMIT ?";
+            "ORDER BY likes_count DESC, f.film_id ASC LIMIT ?";
 
     @Override
     public Film create(Film film) {
@@ -95,15 +95,7 @@ public class FilmDbStorage implements FilmStorage {
         jdbcTemplate.query(GET_ALL_QUERY, (rs, rowNum) -> {
             Long filmId = rs.getLong("film_id");
             if (!filmsId.contains(filmId)) {
-                Film film = new Film();
-                film.setId(filmId);
-                film.setName(rs.getString("name"));
-                film.setDescription(rs.getString("description"));
-                film.setReleaseDate(rs.getDate("releaseDate").toLocalDate());
-                film.setDuration(rs.getInt("duration"));
-                Mpa mpa = new Mpa(rs.getInt("mpa_id"), rs.getString("mpa_name"));
-                film.setMpa(mpa);
-                film.setLikesCount(rs.getInt("likes_count"));
+                Film film = createFilm(rs);
                 films.add(film);
                 filmsId.add(filmId);
             }
@@ -169,43 +161,7 @@ public class FilmDbStorage implements FilmStorage {
     @Override
     public Collection<Film> getPopularFilms(int count) {
         log.info("Получен список из {} самых популярных фильмов", count);
-        List<Long> filmsId = new ArrayList<>();
-        List<Film> films = new ArrayList<>();
-        Map<Long, Set<Genre>> genresWithFilms = new HashMap<>();
-
-        jdbcTemplate.query(GET_POPULAR_QUERY, (rs, rowNum) -> {
-            Long filmId = rs.getLong("film_id");
-            if (!filmsId.contains(filmId)) {
-                Film film = new Film();
-                film.setId(filmId);
-                film.setName(rs.getString("name"));
-                film.setDescription(rs.getString("description"));
-                film.setReleaseDate(rs.getDate("releaseDate").toLocalDate());
-                film.setDuration(rs.getInt("duration"));
-                Mpa mpa = new Mpa(rs.getInt("mpa_id"), rs.getString("mpa_name"));
-                film.setMpa(mpa);
-                film.setLikesCount(rs.getInt("likes_count"));
-                films.add(film);
-                filmsId.add(filmId);
-            }
-            if (rs.getString("genre_name") != null) {
-                Genre genre = new Genre(rs.getInt("genre_id"), rs.getString("genre_name"));
-                Set<Genre> filmGenres = genresWithFilms.get(filmId);
-                if (filmGenres == null) {
-                    filmGenres = new HashSet<>();
-                    genresWithFilms.put(filmId, filmGenres);
-                }
-                filmGenres.add(genre);
-            }
-            return null;
-        }, count);
-
-        for (Film film : films) {
-            if (genresWithFilms.containsKey(film.getId())) {
-                film.setGenres(genresWithFilms.get(film.getId()));
-            }
-        }
-        return films;
+        return jdbcTemplate.query(GET_POPULAR_QUERY, this::makeFilm, count);
     }
 
     private Film makeFilm(ResultSet rs, int rowNum) throws SQLException {
@@ -225,12 +181,25 @@ public class FilmDbStorage implements FilmStorage {
         return film;
     }
 
+    private Film createFilm(ResultSet rs) throws SQLException {
+        Film film = new Film();
+        film.setId(rs.getLong("film_id"));
+        film.setName(rs.getString("name"));
+        film.setDescription(rs.getString("description"));
+        film.setReleaseDate(rs.getDate("releaseDate").toLocalDate());
+        film.setDuration(rs.getInt("duration"));
+        Mpa mpa = new Mpa(rs.getInt("mpa_id"), rs.getString("mpa_name"));
+        film.setMpa(mpa);
+        film.setLikesCount(rs.getInt("likes_count"));
+        return film;
+    }
+
     private void addGenres(Film film) {
         List<Genre> genres = new ArrayList<>(film.getGenres());
         jdbcTemplate.batchUpdate(ADD_GENRES_QUERY, new BatchPreparedStatementSetter() {
             @Override
             public void setValues(PreparedStatement ps, int i) throws SQLException {
-                ps.setInt(1, film.getId().intValue());
+                ps.setLong(1, film.getId());
                 ps.setInt(2, genres.get(i).getId());
             }
 
