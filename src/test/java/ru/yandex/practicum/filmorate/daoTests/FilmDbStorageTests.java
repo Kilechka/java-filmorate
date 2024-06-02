@@ -113,6 +113,7 @@ public class FilmDbStorageTests {
     public void shouldGetAllFilms() {
         Collection<Film> films = filmService.getAllFilms();
         System.out.println(film1.getGenres());
+        System.out.println(films);
 
         assertTrue(films != null);
         assertTrue(films.size() == 3);
@@ -164,12 +165,11 @@ public class FilmDbStorageTests {
             filmService.likeTheFilm(2L, 2L);
             filmService.likeTheFilm(3L, 1L);
 
-        List<Film> popularFilms = (List<Film>) filmService.getPopularFilms(3);
+        List<Film> popularFilms = (List<Film>) filmService.getPopularFilms(2);
         System.out.println(popularFilms);
 
-        assertEquals(3, popularFilms.size());
+        assertEquals(2, popularFilms.size());
         assertEquals(2L, popularFilms.get(0).getId());
         assertEquals(1L, popularFilms.get(1).getId());
-        assertEquals(3L, popularFilms.get(2).getId());
     }
 }

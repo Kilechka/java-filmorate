@@ -20,4 +20,8 @@ public class Film {
     private Set<Genre> genres = new HashSet<>();
     @JsonIgnoreProperties({"likesCount"})
     private Integer likesCount;
+
+    public void addFilmGenre(Genre genre) {
+        genres.add(genre);
+    }
 }
