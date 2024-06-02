@@ -41,7 +41,7 @@ public class FilmDbStorage implements FilmStorage {
             "FROM films f " +
             "LEFT JOIN mpa m ON f.mpa_id = m.mpa_id " +
             "ORDER BY f.film_id";
-    private static final String UPDATE_FILM_QUERY = "UPDATE films SET name = ?, description = ?, releaseDate = ?, duration = ?, mpa_id = ? " +
+    private static final String UPDATE_FILM_QUERY = "UPDATE films SET name = ?, description = ?, releaseDate = ?, duration = ?, mpa_id = ?, likes_count = ? " +
             "WHERE film_id = ?";
 
     private static final String FIND_BY_ID_QUERY = "SELECT f.*, m.name as mpa_name FROM films f LEFT JOIN mpa m ON f.mpa_id = m.mpa_id WHERE f.film_id = ?";
@@ -106,13 +106,13 @@ public class FilmDbStorage implements FilmStorage {
                 toSqlDate(newFilm.getReleaseDate()),
                 newFilm.getDuration(),
                 newFilm.getMpa().getId(),
+                likesCount,
                 newFilm.getId());
         if (newFilm.getGenres() != null || !newFilm.getGenres().isEmpty()) {
             log.info("добавляем жанры {}", newFilm.getGenres());
             jdbcTemplate.update("DELETE FROM film_genre WHERE film_id = ?", newFilm.getId());
             addGenres(newFilm);
         }
-        jdbcTemplate.update("UPDATE films SET likes_count = ? WHERE film_id = ?", likesCount, newFilm.getId());
         log.info("Обновлен фильм с id = {}", newFilm.getId());
         return newFilm;
     }
