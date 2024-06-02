@@ -19,11 +19,13 @@ public class LikeDbStorage implements LikeStorage {
     private final JdbcTemplate jdbcTemplate;
     private static final String LIKE_QUERY = "INSERT INTO film_likes(user_id, film_id) VALUES (?, ?)";
     private static final String DELETE_LIKE_QUERY = "DELETE FROM film_likes WHERE user_id = ? AND film_id = ?";
-    private static final String GET_LIKES_QUERY = "SELECT * FROM film_likes";
+    private static final String GET_LIKES_QUERY = "SELECT * FROM film_likes WHERE film_id = ?";
 
     @Override
     public Film likeTheFilm(Film film, Long userId) {
         jdbcTemplate.update(LIKE_QUERY, userId, film.getId());
+        int likesCount = jdbcTemplate.queryForObject("SELECT likes_count FROM films WHERE film_id = ?", Integer.class, film.getId());
+        film.setLikesCount(likesCount);
         jdbcTemplate.update("UPDATE films SET likes_count = likes_count + 1 WHERE film_id = ?", film.getId());
         log.info("Пользователь с id {} поставил лайк фильму с id {}", userId, film.getId());
 
@@ -43,11 +45,9 @@ public class LikeDbStorage implements LikeStorage {
     public Set<Long> getFilmsLikes(Long id) {
         Set<Long> likes = new HashSet<>();
 
-        SqlRowSet rows = jdbcTemplate.queryForRowSet(GET_LIKES_QUERY);
+        SqlRowSet rows = jdbcTemplate.queryForRowSet(GET_LIKES_QUERY, id);
         while (rows.next()) {
-            if (rows.getInt("film_id") == id) {
-                likes.add(rows.getLong("user_id"));
-            }
+            likes.add(rows.getLong("user_id"));
         }
 
         return likes;

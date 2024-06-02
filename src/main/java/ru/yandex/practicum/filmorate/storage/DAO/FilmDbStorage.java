@@ -14,7 +14,6 @@ import ru.yandex.practicum.filmorate.model.Genre;
 import ru.yandex.practicum.filmorate.model.Mpa;
 import ru.yandex.practicum.filmorate.storage.FilmStorage;
 import ru.yandex.practicum.filmorate.storage.GenreStorage;
-import ru.yandex.practicum.filmorate.storage.LikeStorage;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -29,13 +28,11 @@ public class FilmDbStorage implements FilmStorage {
 
     private final JdbcTemplate jdbcTemplate;
     private final GenreStorage genreStorage;
-    private final LikeStorage likeStorage;
 
     @Autowired
-    public FilmDbStorage(JdbcTemplate jdbcTemplate, GenreStorage genreStorage, LikeStorage likeStorage) {
+    public FilmDbStorage(JdbcTemplate jdbcTemplate, GenreStorage genreStorage) {
         this.jdbcTemplate = jdbcTemplate;
         this.genreStorage = genreStorage;
-        this.likeStorage = likeStorage;
     }
 
     private static final String CREATE_FILM_QUERY = "INSERT INTO films(name, description, releaseDate, duration, mpa_id) " +
@@ -44,7 +41,7 @@ public class FilmDbStorage implements FilmStorage {
             "FROM films f " +
             "LEFT JOIN mpa m ON f.mpa_id = m.mpa_id " +
             "ORDER BY f.film_id";
-    private static final String UPDATE_FILM_QUERY = "UPDATE films SET name = ?, description = ?, releaseDate = ?, duration = ?, mpa_id = ?, likes_count = ? " +
+    private static final String UPDATE_FILM_QUERY = "UPDATE films SET name = ?, description = ?, releaseDate = ?, duration = ?, mpa_id = ? " +
             "WHERE film_id = ?";
 
     private static final String FIND_BY_ID_QUERY = "SELECT f.*, m.name as mpa_name FROM films f LEFT JOIN mpa m ON f.mpa_id = m.mpa_id WHERE f.film_id = ?";
@@ -80,7 +77,6 @@ public class FilmDbStorage implements FilmStorage {
             addGenres(film);
             log.info("добавляем жанры {}", genres);
         }
-        film.setLikesCount(0);
         log.info("Создан фильм с id = {}", film.getId());
         return film;
     }
@@ -96,7 +92,7 @@ public class FilmDbStorage implements FilmStorage {
         if (oldFilm == null) {
             throw new NotFoundException("Фильм с id = {} не найден" + newFilm.getId());
         }
-        int likesCount = jdbcTemplate.queryForObject("SELECT COALESCE(likes_count, 0) FROM films WHERE film_id = ?", Integer.class, newFilm.getId());
+        int likesCount = oldFilm.getLikesCount();
         Set<Genre> genres;
         if (!newFilm.getGenres().isEmpty()) {
             log.info("добавляем имена жанрам");
@@ -110,13 +106,13 @@ public class FilmDbStorage implements FilmStorage {
                 toSqlDate(newFilm.getReleaseDate()),
                 newFilm.getDuration(),
                 newFilm.getMpa().getId(),
-                likesCount,
                 newFilm.getId());
         if (newFilm.getGenres() != null || !newFilm.getGenres().isEmpty()) {
             log.info("добавляем жанры {}", newFilm.getGenres());
             jdbcTemplate.update("DELETE FROM film_genre WHERE film_id = ?", newFilm.getId());
             addGenres(newFilm);
         }
+        jdbcTemplate.update("UPDATE films SET likes_count = ? WHERE film_id = ?", likesCount, newFilm.getId());
         log.info("Обновлен фильм с id = {}", newFilm.getId());
         return newFilm;
     }
@@ -144,11 +140,11 @@ public class FilmDbStorage implements FilmStorage {
         film.setReleaseDate(rs.getDate("releaseDate").toLocalDate());
         film.setDuration(rs.getInt("duration"));
         film.setMpa(new Mpa(rs.getInt("mpa_id"), rs.getString("mpa_name")));
-        film.setLikesCount(rs.getInt("likes_count"));
         Set<Genre> genres = genreStorage.getFilmGenres(rs.getLong("film_id"));
         if (genres.size() != 0) {
-            film.setGenres(genreStorage.getFilmGenres(rs.getLong("film_id")));
+            film.setGenres(genres);
         }
+        film.setLikesCount(rs.getInt("likes_count"));
         log.info("Текущее количество лайков в результате запроса: {}", rs.getInt("likes_count"));
         return film;
     }
@@ -158,7 +154,7 @@ public class FilmDbStorage implements FilmStorage {
         jdbcTemplate.batchUpdate(ADD_GENRES_QUERY, new BatchPreparedStatementSetter() {
             @Override
             public void setValues(PreparedStatement ps, int i) throws SQLException {
-                ps.setInt(1, Math.toIntExact(film.getId()));
+                ps.setInt(1, film.getId().intValue());
                 ps.setInt(2, genres.get(i).getId());
             }
 

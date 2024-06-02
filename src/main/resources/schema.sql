@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS films (
   releaseDate date NOT NULL,
   duration integer NOT NULL,
   mpa_id integer NOT NULL,
-  likes_count integer
+  likes_count INTEGER DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS film_likes (

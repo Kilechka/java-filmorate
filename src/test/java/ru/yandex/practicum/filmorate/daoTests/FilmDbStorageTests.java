@@ -99,7 +99,6 @@ public class FilmDbStorageTests {
         film3.setDuration(300);
         film3.setMpa(mpa);
         filmService.create(film3);
-
     }
 
     @Test
