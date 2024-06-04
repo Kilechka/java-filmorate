@@ -2,16 +2,19 @@ package ru.yandex.practicum.filmorate.service;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.Genre;
+import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.FilmStorage;
+import ru.yandex.practicum.filmorate.storage.LikeStorage;
 import ru.yandex.practicum.filmorate.storage.UserStorage;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
+import java.util.Optional;
 
 @Service
 @Slf4j
@@ -19,18 +22,21 @@ public class FilmService {
 
     private final FilmStorage filmStorage;
     private final UserStorage userStorage;
+    private final LikeStorage likeStorage;
     private final LocalDate minReleaseDate = LocalDate.of(1895, 12, 28);
 
     @Autowired
-    public FilmService(FilmStorage filmStorage, UserStorage userStorage) {
+    public FilmService(@Qualifier("FilmDbStorage") FilmStorage filmStorage, @Qualifier("UserDbStorage") UserStorage userStorage, LikeStorage likeStorage) {
         this.filmStorage = filmStorage;
         this.userStorage = userStorage;
+        this.likeStorage = likeStorage;
     }
 
     public Film create(Film film) {
         validate(film);
         log.info("Создаем новый фильм {}", film);
-        return filmStorage.create(film);
+        filmStorage.create(film);
+        return film;
     }
 
     public Collection<Film> getAllFilms() {
@@ -48,39 +54,37 @@ public class FilmService {
         return filmStorage.updateFilm(newFilm);
     }
 
+    public Film findFilmById(Long id) {
+        return filmStorage.findFilmById(id);
+    }
+
     public Film likeTheFilm(Long id, Long userId) {
         Film film = filmStorage.findFilmById(id);
-
-        userStorage.findUserById(userId);
-        film.getLikes().add(userId);
-        log.info("Пользователь с id {} поставил лайк фильму с id {}", userId, id);
-
-        return film;
+        User user = userStorage.findUserById(userId);
+        log.info("Пользователь с id {} ставит лайк фильму с id {}", userId, id);
+        return likeStorage.likeTheFilm(film, userId);
     }
 
     public Film deleteLike(Long id, Long userId) {
         Film film = filmStorage.findFilmById(id);
-
+        User user = userStorage.findUserById(userId);
         userStorage.findUserById(userId);
-        film.getLikes().remove(userId);
-        log.info("Пользователь с id {} удалил лайк у фильма с id {}", userId, id);
+
+        likeStorage.deleteLike(film, userId);
+        log.info("Пользователь с id {} удаляет лайк у фильма с id {}", userId, id);
 
         return film;
     }
 
     public Collection<Film> getPopularFilms(int count) {
-        List<Film> films  = new ArrayList<>(getAllFilms());
-        films.sort((f1, f2) -> f2.getLikes().size() - f1.getLikes().size());
-        if (count < films.size()) {
-            films = films.subList(0, count);
-        }
-
-        log.info("Получен список из {} самых популярных фильмов", count);
-
-        return films;
+        log.info("Получаем список из {} самых популярных фильмов", count);
+        return filmStorage.getPopularFilms(count);
     }
 
     private void validate(Film film) {
+        Optional<Genre> wrongGenres = film.getGenres().stream()
+                .filter(genre -> genre.getId() > 6 || genre.getId() < 1)
+                .findFirst();
         if (film.getName() == null || film.getName().isBlank()) {
             log.warn("Название не может быть пустым");
             throw new ValidationException("Название не может быть пустым");
@@ -104,6 +108,15 @@ public class FilmService {
         if (film.getDuration() < 0) {
             log.warn("Продолжительность фильма должна быть положительным числом");
             throw new ValidationException("Продолжительность фильма должна быть положительным числом");
+        }
+        if (film.getMpa() == null) {
+            throw new ValidationException("Рейтинг не может быть пустым");
+        }
+        if (film.getMpa().getId() > 5 || film.getMpa().getId() < 1) {
+            throw new ValidationException("Указан некорректный рейтинг");
+        }
+        if (wrongGenres.isPresent()) {
+            throw new ValidationException("Указан некорректный жанр");
         }
         log.info("Валидация пройдена");
     }
